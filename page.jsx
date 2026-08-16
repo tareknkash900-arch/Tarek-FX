@@ -1,61 +1,472 @@
 "use client";
-import {useEffect,useMemo,useRef,useState} from "react";
-import {Activity,BarChart3,Bell,BookOpen,BrainCircuit,ChevronDown,Crosshair,Globe2,Grid2X2,Heart,Layers,LineChart,Menu,Minus,Newspaper,Plus,RotateCcw,Search,Settings,ShieldCheck,SlidersHorizontal,Star,Target,TrendingDown,TrendingUp,Wallet,X,Zap} from "lucide-react";
 
-const ASSETS=[
- {id:"bitcoin",symbol:"BTC",name:"Bitcoin",price:67210,change:2.74,low:65020,high:68110},
- {id:"ethereum",symbol:"ETH",name:"Ethereum",price:3418,change:1.42,low:3310,high:3470},
- {id:"solana",symbol:"SOL",name:"Solana",price:178.4,change:-.82,low:172,high:184},
- {id:"binancecoin",symbol:"BNB",name:"BNB",price:612,change:.63,low:601,high:619},
- {id:"ripple",symbol:"XRP",name:"XRP",price:2.31,change:3.1,low:2.18,high:2.38},
- {id:"dogecoin",symbol:"DOGE",name:"Dogecoin",price:.19,change:-1.2,low:.182,high:.195}
+import { useMemo, useState } from "react";
+
+const coins = [
+  { symbol: "BTC/USDT", name: "Bitcoin", price: 118420, change: 2.84 },
+  { symbol: "ETH/USDT", name: "Ethereum", price: 4218.6, change: 1.72 },
+  { symbol: "SOL/USDT", name: "Solana", price: 184.32, change: -0.91 },
+  { symbol: "BNB/USDT", name: "BNB", price: 812.4, change: 0.64 },
+  { symbol: "XRP/USDT", name: "XRP", price: 3.18, change: -1.24 },
+  { symbol: "DOGE/USDT", name: "Dogecoin", price: 0.238, change: 3.41 },
 ];
-const news=[
-["Bitcoin يتحرك قرب مقاومة يومية مهمة","إيجابي","منذ 18 دقيقة"],
-["تزايد أحجام التداول في سوق العملات الرقمية","إيجابي","منذ 42 دقيقة"],
-["Ethereum يختبر منطقة دعم قصيرة الأجل","محايد","منذ ساعة"],
-["تقلبات العملات البديلة ترتفع مع تغير السيولة","حذر","منذ ساعتين"]
+
+const news = [
+  "البيتكوين يحافظ على قوته مع استمرار اهتمام المستثمرين بالسوق.",
+  "ارتفاع نشاط التداول على العملات الرقمية خلال الساعات الأخيرة.",
+  "الإيثيريوم يختبر منطقة مقاومة مهمة أمام المتداولين.",
+  "سولانا تتحرك داخل نطاق سعري ضيق مع زيادة أحجام التداول.",
 ];
-const money=n=>n>=1000?n.toLocaleString("en-US",{maximumFractionDigits:n<100000?2:0}):n.toLocaleString("en-US",{maximumFractionDigits:5});
-const candles=(seed=1)=>Array.from({length:90},(_,i)=>{let x=i/8;let trend=i*.7;let wave=Math.sin(i*.55+seed)*4+Math.sin(i*.18)*7;let close=100+trend+wave;return {o:close-2+Math.sin(i)*1.8,h:close+5+Math.abs(Math.sin(i))*2,l:close-5-Math.abs(Math.cos(i))*2,c:close}});
 
-function Chart({asset,timeframe}) {
- const canvas=useRef(null);
- useEffect(()=>{const c=canvas.current,ctx=c.getContext("2d"),d=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*d;c.height=h*d;ctx.scale(d,d);ctx.fillStyle="#07120e";ctx.fillRect(0,0,w,h);
- const data=candles(asset.symbol.length);const min=Math.min(...data.map(x=>x.l))-5,max=Math.max(...data.map(x=>x.h))+5;
- ctx.strokeStyle="#153027";ctx.lineWidth=1;for(let i=1;i<8;i++){let y=i*h/8;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}for(let i=1;i<10;i++){let x=i*w/10;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
- const bw=Math.max(3,w/data.length*.55);data.forEach((v,i)=>{let x=(i+.5)*w/data.length,yo=h-(v.o-min)/(max-min)*h,yc=h-(v.c-min)/(max-min)*h,yh=h-(v.h-min)/(max-min)*h,yl=h-(v.l-min)/(max-min)*h;let up=v.c>=v.o;ctx.strokeStyle=up?"#24d891":"#f0656b";ctx.fillStyle=up?"#24d891":"#f0656b";ctx.beginPath();ctx.moveTo(x,yh);ctx.lineTo(x,yl);ctx.stroke();ctx.fillRect(x-bw/2,Math.min(yo,yc),bw,Math.max(1,Math.abs(yc-yo)))}); 
- ctx.strokeStyle="#f0c85a";ctx.lineWidth=1.5;ctx.beginPath();data.forEach((v,i)=>{let x=(i+.5)*w/data.length,y=h-(v.c-min)/(max-min)*h*.92; i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
- },[asset,timeframe]);return <canvas ref={canvas} className="chartCanvas"/>}
-
-export default function App(){
- const [asset,setAsset]=useState(ASSETS[0]),[tf,setTf]=useState("4س"),[left,setLeft]=useState("الرئيسية"),[order,setOrder]=useState("شراء"),[side,setSide]=useState(false),[watch,setWatch]=useState([]),[search,setSearch]=useState(""),[qty,setQty]=useState("0.01"),[leverage,setLeverage]=useState("1x");
- const filtered=useMemo(()=>ASSETS.filter(a=>(a.name+a.symbol).toLowerCase().includes(search.toLowerCase())),[search]);
- const signal=asset.change>2?["شراء","green",76]:asset.change< -1?["بيع","red",68]:["انتظار","yellow",63];
- return <div className="app">
-  <header className="top"><button className="hamb" onClick={()=>setSide(!side)}><Menu/></button><div className="brand"><div className="mark">TF</div><div><b>طارق إف اكس</b><small>TAREK FX · V3</small></div></div><div className="globalSearch"><Search size={16}/><input placeholder="بحث: BTC / ETH / SOL..." value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="topBtns"><button><Bell size={17}/></button><button><Wallet size={17}/><span>المحفظة</span></button></div></header>
-  <aside className={side?"sidebar open":"sidebar"}><div className="sideTitle">منصة التداول</div><Nav icon={Grid2X2} text="لوحة الأسواق" active={left==="الرئيسية"} onClick={()=>setLeft("الرئيسية")}/><Nav icon={LineChart} text="الأسواق" active={left==="الأسواق"} onClick={()=>setLeft("الأسواق")}/><Nav icon={BrainCircuit} text="طارق AI" active={left==="طارق AI"} onClick={()=>setLeft("طارق AI")}/><Nav icon={Target} text="الإشارات" active={left==="الإشارات"} onClick={()=>setLeft("الإشارات")}/><Nav icon={Newspaper} text="الأخبار" active={left==="الأخبار"} onClick={()=>setLeft("الأخبار")}/><Nav icon={Heart} text="المفضلة" active={left==="المفضلة"} onClick={()=>setLeft("المفضلة")}/><div className="sideSep"/><Nav icon={Settings} text="الإعدادات" active={false} onClick={()=>{}}/><div className="risk"><ShieldCheck size={17}/><div><b>وضع المحاكاة</b><small>الأوامر لا تُرسل إلى منصة حقيقية</small></div></div></aside>
-  <main className="main">
-   {left==="الرئيسية"&&<><MarketHeader asset={asset} setAsset={setAsset} watch={watch} setWatch={setWatch}/><section className="terminal"><div className="chartPanel"><div className="chartToolbar"><div className="timeframes">{["1د","5د","15د","1س","4س","1ي"].map(t=><button key={t} className={tf===t?"active":""} onClick={()=>setTf(t)}>{t}</button>)}</div><div className="tools"><button><Crosshair/></button><button><SlidersHorizontal/></button><button><RotateCcw/></button></div></div><div className="chartWrap"><div className="priceAxis"><span>${money(asset.high)}</span><span>${money((asset.high+asset.low)/2)}</span><span>${money(asset.low)}</span></div><Chart asset={asset} timeframe={tf}/></div><div className="indicators"><span>EMA 20 <b>صاعد</b></span><span>RSI <b>58.4</b></span><span>MACD <b>إيجابي</b></span><span>Volume <b>مرتفع</b></span></div></div><OrderPanel asset={asset} order={order} setOrder={setOrder} qty={qty} setQty={setQty} leverage={leverage} setLeverage={setLeverage}/></section>
-    <section className="below"><div className="panel"><Head title="قائمة المراقبة" icon={Star}/>{filtered.map(a=><WatchRow key={a.id} a={a} active={a.id===asset.id} onClick={()=>setAsset(a)} watch={watch.includes(a.id)} toggle={()=>setWatch(watch.includes(a.id)?watch.filter(x=>x!==a.id):[...watch,a.id])}/>)}</div><div className="panel"><Head title="طارق AI · تحليل سريع" icon={BrainCircuit}/><div className="aiScore"><div className={"score "+signal[1]}>{signal[2]}%</div><div><span className={"pill "+signal[1]}>{signal[0]}</span><h3>{asset.name}: ميل السوق {signal[0]}</h3><p>الزخم السعري خلال 24 ساعة {asset.change>=0?"إيجابي":"ضعيف"} مع مراقبة مستويات اليوم.</p></div></div><div className="miniStats"><span>الدعم <b>${money(asset.low)}</b></span><span>السعر <b>${money(asset.price)}</b></span><span>المقاومة <b>${money(asset.high)}</b></span></div></div><div className="panel"><Head title="آخر الأخبار" icon={Newspaper}/>{news.map((n,i)=><article className="headline" key={i}><span className={"newsDot "+(i===2?"yellow":i===3?"red":"green")}/><div><b>{n[0]}</b><small>{n[2]} · {n[1]}</small></div></article>)}</div></section></>}
-   {left==="الأسواق"&&<Markets assets={filtered} setAsset={setAsset} asset={asset}/>}
-   {left==="طارق AI"&&<AI asset={asset} signal={signal}/>}
-   {left==="الإشارات"&&<Signals assets={ASSETS} setAsset={setAsset} setLeft={setLeft}/>}
-   {left==="الأخبار"&&<News/>}
-   {left==="المفضلة"&&<Favorites assets={ASSETS.filter(a=>watch.includes(a.id))} setAsset={setAsset}/>}
-   <footer><b>طارق إف اكس</b><span>V3 · منصة تحليل وتداول تجريبية</span><span>⚠️ ليست نصيحة مالية</span></footer>
-  </main>
- </div>
+function formatPrice(price) {
+  if (price < 1) return price.toFixed(4);
+  if (price < 10) return price.toFixed(2);
+  return price.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
-function Nav({icon:Icon,text,active,onClick}){return <button className={active?"nav active":"nav"} onClick={onClick}><Icon size={17}/>{text}</button>}
-function Head({title,icon:Icon}){return <div className="head"><h2><Icon size={16}/>{title}</h2><button>عرض الكل ←</button></div>}
-function MarketHeader({asset,setAsset,watch,setWatch}){return <div className="marketHeader"><div className="assetInfo"><div className="assetLogo">{asset.symbol[0]}</div><div><div className="assetName"><h1>{asset.symbol}/USDT</h1><span>سوق فوري</span></div><div className="assetSub">{asset.name} · Binance</div></div><button className="fav" onClick={()=>setWatch(watch.includes(asset.id)?watch.filter(x=>x!==asset.id):[...watch,asset.id])}>{watch.includes(asset.id)?<Star fill="currentColor"/>:<Star/>}</button></div><div className="quote"><b>${money(asset.price)}</b><span className={asset.change>=0?"up":"down"}>{asset.change>=0?"+":""}{asset.change.toFixed(2)}%</span><small>24 ساعة</small></div><div className="marketPicker"><Search size={14}/><select value={asset.id} onChange={e=>setAsset(ASSETS.find(x=>x.id===e.target.value))}>{ASSETS.map(a=><option value={a.id} key={a.id}>{a.symbol}/USDT</option>)}</select></div></div>}
-function WatchRow({a,active,onClick,watch,toggle}){return <div className={active?"watchRow active":"watchRow"} onClick={onClick}><div className="assetMini"><span>{a.symbol[0]}</span><div><b>{a.symbol}</b><small>{a.name}</small></div></div><b>${money(a.price)}</b><span className={a.change>=0?"up":"down"}>{a.change>=0?"+":""}{a.change.toFixed(2)}%</span><button className="star" onClick={e=>{e.stopPropagation();toggle()}}>{watch?<Star fill="currentColor"/>:<Star/>}</button></div>}
-function OrderPanel({asset,order,setOrder,qty,setQty,leverage,setLeverage}){let total=(Number(qty)||0)*asset.price;return <div className="orderPanel"><div className="orderTabs"><button className={order==="شراء"?"buy active":""} onClick={()=>setOrder("شراء")}>شراء</button><button className={order==="بيع"?"sell active":""} onClick={()=>setOrder("بيع")}>بيع</button></div><label>نوع الأمر<select><option>سوق Market</option><option>حد Limit</option><option>وقف Stop</option></select></label><label>السعر<input value={asset.price} readOnly/></label><label>الكمية<input value={qty} onChange={e=>setQty(e.target.value)} placeholder="0.01"/></label><label>الرافعة<select value={leverage} onChange={e=>setLeverage(e.target.value)}>{["1x","2x","3x","5x","10x"].map(x=><option key={x}>{x}</option>)}</select></label><div className="orderTotal"><span>القيمة التقريبية</span><b>${total.toFixed(2)}</b></div><button className={order==="شراء"?"execute buy":"execute sell"} onClick={()=>alert("هذا وضع محاكاة فقط — لم يتم إرسال أي أمر حقيقي.")}>محاكاة {order} {asset.symbol}</button><small className="demo">وضع تجريبي · لا توجد أموال حقيقية</small></div>}
-function Markets({assets,setAsset,asset}){return <><PageTitle t="الأسواق" s="تصفح العملات ومراقبة حركة السعر"/><div className="panel marketTable"><div className="tableHead"><span>الأصل</span><span>السعر</span><span>24س</span><span>قمة</span><span>قاع</span><span>اختيار</span></div>{assets.map(a=><WatchRow key={a.id} a={a} active={a.id===asset.id} onClick={()=>setAsset(a)} watch={false} toggle={()=>{}}/>)}</div></>}
-function AI({asset,signal}){return <><PageTitle t={"طارق AI · "+asset.name} s="تحليل إرشادي متعدد العوامل"/><div className="aiGrid"><div className="aiHero"><div className={"bigScore "+signal[1]}>{signal[2]}<small>%</small></div><span className={"pill "+signal[1]}>{signal[0]}</span><h2>الانحياز الحالي للسوق</h2><p>هذه النتيجة نموذج أولي يعتمد على الحركة السعرية اليومية. سيتم توصيل نموذج LLM حقيقي في مرحلة الربط بالخادم.</p></div><div className="panel"><h2>ملخص التحليل</h2><Info k="الزخم" v={asset.change>=0?"إيجابي":"ضعيف"}/><Info k="RSI" v={asset.change>2?"64.2":"52.8"}/><Info k="MACD" v={asset.change>=0?"Bullish":"Neutral"}/><Info k="حالة الاتجاه" v={asset.change>0?"صاعد قصير الأجل":"متذبذب"}/></div></div></>}
-function Info({k,v}){return <div className="info"><span>{k}</span><b>{v}</b></div>}
-function Signals({assets,setAsset,setLeft}){return <><PageTitle t="إشارات طارق AI" s="إشارات إرشادية وليست ضمانًا للربح"/><div className="signalGrid">{assets.map(a=>{let s=a.change>2?["شراء","green",76]:a.change< -1?["بيع","red",68]:["انتظار","yellow",63];return <button className="signalCard" key={a.id} onClick={()=>{setAsset(a);setLeft("الرئيسية")}}><div className="assetMini"><span>{a.symbol[0]}</span><div><b>{a.symbol}/USDT</b><small>{a.name}</small></div></div><strong className={s[1]}>{s[0]}</strong><b>{s[2]}%</b></button>})}</div></>}
-function News(){return <><PageTitle t="أخبار الكريبتو" s="ملخصات جاهزة لمتابعة السوق"/><div className="newsList">{news.map((n,i)=><article className="newsItem" key={i}><div className="newsIcon"><Newspaper/></div><div><span>طارق إف اكس · {n[2]}</span><h2>{n[0]}</h2><p>خبر مختصر مرتبط بحركة السوق. في الإصدار النهائي يمكن ربط مصادر أخبار مباشرة وتلخيصها آليًا باللغة العربية.</p></div><button>تحليل الخبر</button></article>)}</div></>}
-function Favorites({assets,setAsset}){return <><PageTitle t="المفضلة" s="قائمة العملات التي تتابعها"/>{assets.length?<div className="signalGrid">{assets.map(a=><button className="signalCard" key={a.id} onClick={()=>setAsset(a)}><div className="assetMini"><span>{a.symbol[0]}</span><div><b>{a.symbol}</b><small>{a.name}</small></div></div><strong>${money(a.price)}</strong><span className={a.change>=0?"up":"down"}>{a.change.toFixed(2)}%</span></button>)}</div>:<div className="empty"><Star/><h2>لا توجد مفضلات</h2><p>أضف عملات من الشاشة الرئيسية.</p></div>}</>}
-function PageTitle({t,s}){return <div className="pageTitle"><span className="eyebrow">طارق إف اكس</span><h1>{t}</h1><p>{s}</p></div>}
+
+export default function Home() {
+  const [selected, setSelected] = useState(coins[0]);
+  const [timeframe, setTimeframe] = useState("1س");
+  const [orderType, setOrderType] = useState("شراء");
+  const [amount, setAmount] = useState("");
+  const [watchlist, setWatchlist] = useState(["BTC/USDT", "ETH/USDT"]);
+  const [message, setMessage] = useState("");
+
+  const currentCoin = useMemo(
+    () => coins.find((coin) => coin.symbol === selected.symbol) || selected,
+    [selected]
+  );
+
+  function toggleWatchlist(symbol) {
+    setWatchlist((old) =>
+      old.includes(symbol)
+        ? old.filter((item) => item !== symbol)
+        : [...old, symbol]
+    );
+  }
+
+  function submitOrder() {
+    if (!amount || Number(amount) <= 0) {
+      setMessage("أدخل كمية صحيحة أولاً.");
+      return;
+    }
+
+    setMessage(
+      `تمت محاكاة أمر ${orderType} لـ ${currentCoin.symbol} بقيمة ${amount} USDT`
+    );
+  }
+
+  return (
+    <main dir="rtl" className="tarek-app">
+      {/* الشريط العلوي */}
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-logo">T</div>
+          <div>
+            <h1>طارق إف إكس</h1>
+            <span>منصة التداول الذكية</span>
+          </div>
+        </div>
+
+        <div className="market-status">
+          <span className="status-dot"></span>
+          السوق مفتوح
+        </div>
+
+        <div className="top-actions">
+          <button>🔔</button>
+          <button>⚙️</button>
+          <div className="user-avatar">ط</div>
+        </div>
+      </header>
+
+      {/* شريط العملات */}
+      <section className="ticker">
+        {coins.map((coin) => (
+          <button
+            key={coin.symbol}
+            className={`ticker-item ${
+              selected.symbol === coin.symbol ? "active" : ""
+            }`}
+            onClick={() => setSelected(coin)}
+          >
+            <strong>{coin.symbol}</strong>
+            <span>${formatPrice(coin.price)}</span>
+            <small className={coin.change >= 0 ? "positive" : "negative"}>
+              {coin.change >= 0 ? "+" : ""}
+              {coin.change}%
+            </small>
+          </button>
+        ))}
+      </section>
+
+      {/* المحتوى الرئيسي */}
+      <div className="dashboard">
+        {/* القائمة الجانبية */}
+        <aside className="sidebar">
+          <div className="side-title">القائمة</div>
+
+          <button className="side-link active">📊 الأسواق</button>
+          <button className="side-link">⭐ المفضلة</button>
+          <button className="side-link">🤖 تحليل طارق AI</button>
+          <button className="side-link">📰 الأخبار</button>
+          <button className="side-link">🔔 الإشارات</button>
+          <button className="side-link">🔎 بحث الأصول</button>
+
+          <div className="watch-title">المراقبة</div>
+
+          {coins.slice(0, 4).map((coin) => (
+            <button
+              key={coin.symbol}
+              className="watch-item"
+              onClick={() => setSelected(coin)}
+            >
+              <div>
+                <strong>{coin.symbol}</strong>
+                <small>{coin.name}</small>
+              </div>
+
+              <div className="watch-price">
+                <strong>${formatPrice(coin.price)}</strong>
+                <small className={coin.change >= 0 ? "positive" : "negative"}>
+                  {coin.change >= 0 ? "+" : ""}
+                  {coin.change}%
+                </small>
+              </div>
+            </button>
+          ))}
+        </aside>
+
+        {/* منطقة الرسم */}
+        <section className="workspace">
+          <div className="chart-header">
+            <div>
+              <div className="pair-title">
+                <h2>{currentCoin.symbol}</h2>
+                <button
+                  className="star-button"
+                  onClick={() => toggleWatchlist(currentCoin.symbol)}
+                >
+                  {watchlist.includes(currentCoin.symbol) ? "★" : "☆"}
+                </button>
+              </div>
+
+              <div className="coin-name">{currentCoin.name}</div>
+            </div>
+
+            <div className="price-block">
+              <strong>${formatPrice(currentCoin.price)}</strong>
+              <span
+                className={
+                  currentCoin.change >= 0 ? "positive" : "negative"
+                }
+              >
+                {currentCoin.change >= 0 ? "+" : ""}
+                {currentCoin.change}%
+              </span>
+            </div>
+          </div>
+
+          {/* الفواصل الزمنية */}
+          <div className="timeframes">
+            {["1د", "5د", "15د", "1س", "4س", "1ي"].map((item) => (
+              <button
+                key={item}
+                className={timeframe === item ? "selected" : ""}
+                onClick={() => setTimeframe(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          {/* الرسم البياني */}
+          <div className="chart">
+            <div className="chart-grid"></div>
+
+            <div className="chart-label label-top">
+              ${formatPrice(currentCoin.price + 2200)}
+            </div>
+
+            <div className="chart-label label-mid">
+              ${formatPrice(currentCoin.price)}
+            </div>
+
+            <div className="chart-label label-bottom">
+              ${formatPrice(currentCoin.price - 2200)}
+            </div>
+
+            <svg
+              className="chart-svg"
+              viewBox="0 0 1000 430"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopOpacity="0.35" />
+                  <stop offset="100%" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              <path
+                d="M0 300
+                   L40 280
+                   L80 295
+                   L120 250
+                   L160 265
+                   L200 220
+                   L240 240
+                   L280 190
+                   L320 210
+                   L360 165
+                   L400 180
+                   L440 135
+                   L480 155
+                   L520 120
+                   L560 145
+                   L600 105
+                   L640 125
+                   L680 90
+                   L720 115
+                   L760 80
+                   L800 95
+                   L840 65
+                   L880 90
+                   L920 55
+                   L960 75
+                   L1000 45
+                   L1000 430
+                   L0 430 Z"
+                fill="url(#area)"
+                stroke="none"
+              />
+
+              <path
+                d="M0 300
+                   L40 280
+                   L80 295
+                   L120 250
+                   L160 265
+                   L200 220
+                   L240 240
+                   L280 190
+                   L320 210
+                   L360 165
+                   L400 180
+                   L440 135
+                   L480 155
+                   L520 120
+                   L560 145
+                   L600 105
+                   L640 125
+                   L680 90
+                   L720 115
+                   L760 80
+                   L800 95
+                   L840 65
+                   L880 90
+                   L920 55
+                   L960 75
+                   L1000 45"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            <div className="chart-watermark">طارق FX</div>
+          </div>
+
+          {/* معلومات أسفل الرسم */}
+          <div className="market-stats">
+            <div>
+              <span>الافتتاح</span>
+              <strong>${formatPrice(currentCoin.price - 850)}</strong>
+            </div>
+
+            <div>
+              <span>أعلى سعر</span>
+              <strong>${formatPrice(currentCoin.price + 2300)}</strong>
+            </div>
+
+            <div>
+              <span>أدنى سعر</span>
+              <strong>${formatPrice(currentCoin.price - 2400)}</strong>
+            </div>
+
+            <div>
+              <span>الحجم</span>
+              <strong>1.84B</strong>
+            </div>
+          </div>
+
+          {/* تحليل AI */}
+          <div className="ai-panel">
+            <div className="ai-header">
+              <div className="ai-icon">🤖</div>
+              <div>
+                <h3>تحليل طارق AI</h3>
+                <span>تحليل تجريبي للسوق</span>
+              </div>
+
+              <div className="signal-badge">إيجابي</div>
+            </div>
+
+            <p>
+              السعر يتحرك في اتجاه صاعد على الإطار الحالي. توجد منطقة مقاومة
+              قريبة، لذلك يفضل انتظار تأكيد الاختراق قبل اتخاذ قرار تداول.
+            </p>
+
+            <div className="ai-levels">
+              <div>
+                <span>الدعم</span>
+                <strong>${formatPrice(currentCoin.price - 3100)}</strong>
+              </div>
+
+              <div>
+                <span>المقاومة</span>
+                <strong>${formatPrice(currentCoin.price + 3200)}</strong>
+              </div>
+
+              <div>
+                <span>قوة الإشارة</span>
+                <strong>78%</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* لوحة التداول */}
+        <aside className="trade-panel">
+          <div className="trade-tabs">
+            <button
+              className={orderType === "شراء" ? "buy active" : ""}
+              onClick={() => setOrderType("شراء")}
+            >
+              شراء
+            </button>
+
+            <button
+              className={orderType === "بيع" ? "sell active" : ""}
+              onClick={() => setOrderType("بيع")}
+            >
+              بيع
+            </button>
+          </div>
+
+          <div className="trade-content">
+            <div className="order-row">
+              <span>الأصل</span>
+              <strong>{currentCoin.symbol}</strong>
+            </div>
+
+            <label>نوع الأمر</label>
+            <select>
+              <option>سوق</option>
+              <option>حد</option>
+              <option>إيقاف</option>
+            </select>
+
+            <label>السعر</label>
+            <div className="input-box">
+              <input
+                value={currentCoin.price}
+                readOnly
+                type="number"
+              />
+              <span>USDT</span>
+            </div>
+
+            <label>الكمية</label>
+            <div className="input-box">
+              <input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                type="number"
+              />
+              <span>USDT</span>
+            </div>
+
+            <div className="balance">
+              <span>الرصيد التجريبي</span>
+              <strong>10,000 USDT</strong>
+            </div>
+
+            <button
+              className={`order-button ${
+                orderType === "شراء" ? "buy-button" : "sell-button"
+              }`}
+              onClick={submitOrder}
+            >
+              {orderType} {currentCoin.symbol}
+            </button>
+
+            {message && <div className="order-message">{message}</div>}
+
+            <div className="demo-warning">
+              ⚠️ وضع المحاكاة مفعل
+              <small>
+                الأوامر هنا تجريبية ولا يتم إرسالها إلى منصة تداول حقيقية.
+              </small>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* الأخبار */}
+      <section className="bottom-grid">
+        <div className="news-panel">
+          <div className="section-heading">
+            <h2>📰 آخر الأخبار</h2>
+            <button>عرض الكل</button>
+          </div>
+
+          {news.map((item, index) => (
+            <article className="news-item" key={index}>
+              <div className="news-dot"></div>
+              <div>
+                <p>{item}</p>
+                <small>منذ {index + 1} ساعة</small>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="signals-panel">
+          <div className="section-heading">
+            <h2>🔔 إشارات السوق</h2>
+          </div>
+
+          <div className="signal-card">
+            <span>BTC/USDT</span>
+            <strong className="positive">شراء محتمل</strong>
+            <small>قوة الإشارة 82%</small>
+          </div>
+
+          <div className="signal-card">
+            <span>ETH/USDT</span>
+            <strong className="positive">مراقبة شراء</strong>
+            <small>قوة الإشارة 71%</small>
+          </div>
+
+          <div className="signal-card">
+            <span>SOL/USDT</span>
+            <strong className="negative">انتظار</strong>
+            <small>قوة الإشارة 54%</small>
+          </div>
+        </div>
+      </section>
+
+      {/* التذييل */}
+      <footer>
+        <strong>طارق إف إكس V3</strong>
+        <span>منصة تحليل وتداول تجريبية باللغة العربية</span>
+      </footer>
+    </main>
+  );
+}
